@@ -17,7 +17,9 @@ public:
     const Node* getFrom() const;
     const Node* getTo() const;
 
+    string getName() const;
     long long getRemainCapacity() const;
+    bool isAble() const;
     void assign(Data* data);
     void transmit(Data* data);
 };

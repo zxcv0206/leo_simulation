@@ -6,27 +6,50 @@
 using namespace std;
 
 class User;
+class Node;
 
 class Data {
-    int type;          // data type: raw data(0) or tree(1)
-    User *user;          // which user this data belongs to
+    string type;          // data type: raw data or tree
+    
+protected:
     long long data_cnt;      // # of raw data in this data
-    vector<pair<int,int>> path; // {to,from}
-
+    vector<Node*> path; // every nodes along path in TEG
+    
 public:
-    inline const static int RAWDATA = 0;
-    inline const static int TREE = 1;
+    inline const static string RAWDATA = "RAWDATA";
+    inline const static string TREE = "TREE";
     
-    Data(int type, User *user, long long data_cnt = 1);
-    ~Data(){};
-    int getType() const;
-    User* getUser() const;
+    Data(string type, long long data_cnt = 1);
+    virtual ~Data(){};
+    string getType() const;
     long long getDataCnt() const;
+    vector<Node*> getPath() const;
     
-    int getGrid() const;
     long long getSize() const;
-    void pathAdd(pair<int,int> link); // add a link to path vector
+    virtual int getGrid() const=0;
+    virtual string getName() const=0;
+    void pathAdd(Node* node); // nodes along with path in TEG
 };
 
+class RawData: public Data {
+    User* user;          // which user this data belongs to
+public:
+    RawData(User *user, long long data_cnt = 1);
+    ~RawData(){};
+    User* getUser() const;
+
+    int getGrid() const;
+    string getName() const;
+};
+
+class Tree: public Data {
+    int grid;          // which grid this data belongs to
+public:
+    Tree(int grid, long long data_cnt);
+    ~Tree(){};
+
+    int getGrid() const;
+    string getName() const;
+};
 
 #endif

@@ -19,6 +19,7 @@ int main(){
         for(AlgorithmBase *algo:algos){
             cout << algo->getName() << endl;
             algo->start();
+            if(DEBUG) algo->debug();
         }
 
         // delete algo

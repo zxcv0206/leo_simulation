@@ -28,7 +28,7 @@ AlgorithmBase::~AlgorithmBase(){
     nodes.clear();
 
     for(int g = 0; g < total_grids; g++) {
-        for(auto raw_data: raw_datas[g]) {
+        for(auto &raw_data: raw_datas[g]) {
             delete raw_data;
         }
         raw_datas[g].clear();
@@ -56,7 +56,7 @@ void AlgorithmBase::buildGraph(string file){
     nodes.resize(total_timeslots+1);
     for(int s = 0; s < total_satellites; s++){
         for(int t = 0; t < total_timeslots+1; t++) {
-            Node *satellite = new Satellite(s, capacity, t);
+            Node *satellite = new Satellite(s, t, capacity);
             nodes[t].push_back(satellite);
         }
     }
@@ -66,7 +66,7 @@ void AlgorithmBase::buildGraph(string file){
         graphIn >> user_cnts[g];
         for(int u = total_users; u < total_users+user_cnts[g]; u++) {
             for(int t = 0; t < total_timeslots+1; t++) {
-                Node *user = new User(u, g, t);
+                Node *user = new User(total_satellites+u, g, t);
                 nodes[t].push_back(user);
             }
         }
@@ -106,13 +106,41 @@ void AlgorithmBase::addReq(){
     // all users has its raw data in the beginning
     for(int u = total_satellites; u<total_satellites+total_users; u++){
         User* user = (User *)nodes[0][u];
-        Data* raw_data = new Data(Data::RAWDATA, user);
+        RawData* raw_data = new RawData(user);
         user->dataIn(raw_data);
+        DEBUG("AlgorithmBase::addReq : " << raw_data->getName());
         raw_datas[user->getGrid()].push_back(raw_data);
     }
 }
 
+void AlgorithmBase::start() {
 
-void AlgorithmBase::start(){
-    
+}
+
+void AlgorithmBase::debug(){
+    // TEG
+    debugOut << "TEG" << endl;
+    for(int t = 0; t < total_timeslots; t++) {
+        debugOut << "timeslot " << t << endl;
+        for(int u = 0; u < total_nodes; u++) {
+            for(auto &links_kv: links[t][u]) {
+                Link* link = links_kv.second;
+                debugOut << link->getName() << endl;
+            }
+        }
+    }
+    debugOut << "=================" << endl;
+
+    // data path
+    debugOut << "Data path" << endl;
+    for(auto &raw_datas_g: raw_datas) {
+        for(auto &raw_data: raw_datas_g) {
+            debugOut << raw_data->getName() + " path:" << endl;
+            for(auto &node: raw_data->getPath()) {
+                debugOut << node->getName() << " -> ";
+            }
+            debugOut << endl;
+        }
+    }
+    debugOut << "=================" << endl;
 }

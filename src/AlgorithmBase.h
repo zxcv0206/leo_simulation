@@ -20,8 +20,8 @@ protected:
     vector<int> user_cnts; // user_cnt[g]: # users in grid g
     vector<vector<Node *>> nodes; // nodes[t][id]
     vector<vector<map<int, Link*>>> links;             // links[t][u][v]
-    vector<vector<Data*>> raw_datas; // raw_datas[g][i] 
-    vector<Data*> trees; // tree[g]
+    vector<vector<RawData*>> raw_datas; // raw_datas[g][i] 
+    vector<Tree*> trees; // tree[g]
 
     // two graphs stores the same data, but different data structure
     // vector<map<pair<int, int>, Channel *>> graphs_matrix;   // graphs[t][{u, v}] -> Channel*  
@@ -33,9 +33,11 @@ protected:
 public:
     AlgorithmBase(string algoName, string graphFile);
     virtual ~AlgorithmBase();
-    virtual void start();
     double getRes(string s);
     string getName();
+    
+    virtual void start();
+    void debug();
 };
 
 #endif
