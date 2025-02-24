@@ -32,7 +32,8 @@ void MyAlgo::calHops() { // need to precalculate hops for future timeslot for Tr
 		for(int s1 = 0; s1 < total_satellites; s1++) {
 			hop_cnts[t][s1].resize(total_satellites);
 			for(int s2 = 0; s2 < total_satellites; s2++) {
-				if(links[t][s1].find(s2) != links[t][s1].end()) hop_cnts[t][s1][s2] = 1;
+				if(s1 == s2) hop_cnts[t][s1][s2] = 0;
+				else if(links[t][s1].find(s2) != links[t][s1].end()) hop_cnts[t][s1][s2] = 1;
 				else hop_cnts[t][s1][s2] = LONG_LONG_MAX;
 			}
 		}
