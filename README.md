@@ -5,7 +5,7 @@ storage limit for each satellite
 
 # users in each grid
 
-timeslot1:
+timeslot0:
 # links in this timeslot
 u, v: link (u, v) is connected
 ```

@@ -37,7 +37,7 @@ public:
     string getName();
     
     virtual void start();
-    void debug();
+    virtual void debug();
 };
 
 #endif
