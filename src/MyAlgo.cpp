@@ -8,6 +8,11 @@ MyAlgo::MyAlgo(string graphFile)
 		new_raw_data_cnts_g.resize(total_satellites, 0);
 	}
 
+	new_raw_datas.resize(total_grids);
+	for(auto &new_raw_datas_g: new_raw_datas) {
+		new_raw_datas_g.resize(total_satellites);
+	}
+
 	compress_sats.resize(total_timeslots);
 	for(auto &compress_sats_t: compress_sats) {
 		compress_sats_t.resize(total_grids, -1);
@@ -21,7 +26,8 @@ void MyAlgo::start() {
 		init();
 		uploadRawDatas();
 		findCompressSat();
-		findPath();
+		findAllPaths();
+		compression();
 	}
 }
 
@@ -54,6 +60,7 @@ void MyAlgo::init() {
 	for(int g = 0; g < total_grids; g++) {
 		for(int s = 0; s < total_satellites; s++) {
 			new_raw_data_cnts[g][s] = 0;
+			new_raw_datas[g][s].clear();
 		}
 	}
 }
@@ -73,6 +80,7 @@ void MyAlgo::uploadRawDatas() {
 				link = link_kv.second;
 				if(link->isAble()) {
 					link->assign(data);
+					new_raw_datas[grid][to].push_back(data);
 					new_raw_data_cnts[grid][to]++;
 					break;
 				}
@@ -132,7 +140,249 @@ void MyAlgo::findCompressSat() {
 	}
 }
 
-void MyAlgo::findPath() {
+void MyAlgo::findAllPaths() {
+	// tree
+	for(int g = 0; g < total_grids; g++) {
+		if(trees[g] == nullptr) continue;
+		int t_start = finished_times[timeslot-1][g];
+		int s = compress_sats[timeslot-1][g];
+		int d = compress_sats[timeslot][g];
+		int r = finished_sizes[timeslot-1][g];
+		findPath(t_start, s, d, r, trees[g]);
+	}
+	// raw datas
+	for(int g = 0; g < total_grids; g++) {
+		for(int s = 0; s < total_satellites; s++) {
+			for(auto data: new_raw_datas[g][s]) {
+				int d = compress_sats[timeslot][g];
+				int r = 1;
+				findPath(timeslot, s, d, r, data);
+			}
+		}
+	}
+}
+
+void MyAlgo::findPath(int t_start, int s, int d, int r, Data* data) {
+	//--build G^r
+    vector<vector<map<int, Link*>>> vlinks(total_timeslots, vector<map<int, Link*>>(total_nodes)); // vlinks[t][u][v]: links in G^r
+	Link* vlink;
+	for(int t = t_start; t < total_timeslots; t++) {
+		for(int u = 0; u < total_nodes; u++) {
+			// self storage
+			vlink = new Link(nodes[t][u], nodes[t+1][u]);
+			vlinks[t][u][u] = vlink;
+			// other links need to be able r timslots to be vlink
+			for(auto &link_kv: links[t][u]) {
+				int v = link_kv.first;
+				if (v == u) continue;
+				bool fg = true;
+				for(int t_plum = t; t_plum < t+r; t_plum++) {
+					if(links[t_plum][u].find(v) == links[t_plum][u].end() || !links[t_plum][u][v]->isAble()) {
+						fg = false;
+						break;
+					}
+				}
+				if(fg) {
+					vlink = new Link(nodes[t][u], nodes[t+r][u], 1, r);
+					vlinks[t][u][v] = vlink;
+				}
+			}
+		}
+	}
+
+	//--Dijkstra
+	vector<vector<int>> dist(total_timeslots, vector<int>(total_nodes, INT_MAX));
+	vector<vector<Link*>> prev(total_timeslots, vector<Link*>(total_nodes, nullptr));
+	priority_queue<pair<int,pair<int, int>>, vector<pair<int,pair<int, int>>>, greater<>> pq; // {dst,{t,id}}
+	
+	dist[t_start][s] = 0;
+	pq.push({0, {t_start, s}});
+
+	while (!pq.empty()) {
+        auto [dst, tu] = pq.top(); 
+		pq.pop();
+        auto [t, u] = tu;
+
+        if (dst > dist[t][u]) continue;
+
+		if(u == d) {
+			// get shortest path
+			vector<Link*> short_path;
+			int t_plum = t;
+			int u_plum = u;
+			while(prev[t_plum][u_plum] != nullptr) {
+				vlink = prev[t_plum][u_plum];
+				short_path.push_back(vlink);
+				const Node* from = vlink->getFrom();
+				t_plum = from->getTimeslot();
+				u_plum = from->getId();
+			}
+			assert(t_plum == t_start && u_plum == s);
+			// assign link
+			Link* link;
+			int now_node = s, next_node, now_t = t_start;
+			int cnt; // how many links consist the vlink
+			for(int i = short_path.size()-1; i >= 0; i--) {
+				vlink = short_path[i];
+				next_node = vlink->getTo()->getId();
+				if(next_node == now_node) cnt = 1; // self storage
+				else cnt = r; // send to other nodes
+				for(int t = now_t; t < now_t+cnt; t++) {
+					link = links[t][now_node][next_node];
+					link->assign(data);
+				}
+			} 
+			return;
+		}
+
+        for (auto vlinks_kv : vlinks[t][u]) {
+			vlink = vlinks_kv.second;
+			const Node* v_node = vlink->getTo();
+			int t_plum = v_node->getTimeslot();
+			int v = v_node->getId();
+            if (dist[t][u] + vlink->getWeight() < dist[t_plum][v]) {
+                dist[t_plum][v] = dist[t][u] + vlink->getWeight();
+				prev[t_plum][v] = vlink;
+                pq.push({dist[t_plum][v], {t_plum, v}});
+            }
+        }
+    }
+}
+
+void MyAlgo::compression() {
+	// get # of raw data should be compressed and arrival time
+	vector<int> compress_cnts(total_grids, 0); 
+	vector<pair<int, Data*>> arrivals;
+	// tree
+	for(auto tree: trees) {
+		if(tree == nullptr) continue;
+		const Node* compress_sat = tree->getPath().back()->getTo();
+		int arrival_time = compress_sat->getTimeslot();
+		arrivals.push_back({arrival_time, tree});
+	}
+	// raw data
+	for(int g = 0; g < total_grids; g++) {
+		for(int s = 0; s < total_satellites; s++) {
+			for(auto data: new_raw_datas[g][s]) {
+				const Node* compress_sat = data->getPath().back()->getTo();
+				int arrival_time = compress_sat->getTimeslot();
+				compress_cnts[g]++;
+				arrivals.push_back({arrival_time, data});
+			}
+		}
+	}
+	sort(arrivals.begin(), arrivals.end());
+
+	int now = timeslot;
+	vector<bool> has_tree(total_grids, false); // has_tree[g]: true if tree from g arrived to compress sat s
+	vector<map<int,queue<RawData*>>> que(total_satellites); // que[s][g]: all datas from g has arrived to compress sat s  
+	for(auto arrival_p: arrivals) {
+		auto [t, data] = arrival_p;
+		int g = data->getGrid();
+		int s = compress_sats[timeslot][g];
+		que[s][g]; // make que[s][g] exist
+
+		if(data->getType() == Data::TREE) has_tree[g] = true;
+		else que[s][g].push((RawData*)data);
+
+		// TODO: different compression time
+		while(now < t) { // compress greedily 
+			for(int s = 0; s < total_satellites; s++) {
+				for(auto &[g, q]: que[s]) {
+					// if(compress_cnts[g]>0 && has_tree[g] && !q.empty()) {
+						if(compress_cnts[g]>0 && !q.empty()) {
+						// first compress data, create tree
+						if(trees[g] == nullptr) {
+							trees[g] = new Tree(g,0);
+							has_tree[g] = true;
+							for(int t_plum = 0; t_plum < now; t_plum++) {
+								trees[g]->pathAdd(nullptr);
+							}
+						}
+						if(!has_tree[g]) continue; // tree not arrive
+
+						RawData* data = q.front();
+						q.pop();
+						trees[g]->insert(data);
+						compress_cnts[g]--;
+
+						// raw data storage path
+						int arrival_time = data->getPath().back()->getTo()->getTimeslot();
+						for(int t_plum = arrival_time; t_plum < now; t_plum++) {
+							links[t_plum][s][s]->assign(data);
+						}
+						
+						
+						if(compress_cnts[g] == 0) {
+							// tree storage path
+							if(trees[g]->getPath().size() == 0) arrival_time = now;
+							else arrival_time = trees[g]->getPath().back()->getTo()->getTimeslot();
+							for(int t_plum = arrival_time; t_plum <= now; t_plum++) {
+								links[t_plum][s][s]->assign(trees[g]);
+							}
+
+							finished_times[timeslot][g] = now+1; // TODO: different compression time
+							finished_sizes[timeslot][g] = trees[g]->getSize();
+							que[s].erase(g);
+						}
+						break;
+					}
+				}
+			}
+			now++;
+		}
+	} 
+
+	// compress remain raw data
+	bool has_raw_data = true;
+	while (has_raw_data) {
+		has_raw_data = false;
+		for(int s = 0; s < total_satellites; s++) {
+			for(auto &[g, q]: que[s]) {
+				has_raw_data = true;
+				// if(compress_cnts[g]>0 && has_tree[g] && !q.empty()) {
+				if(compress_cnts[g]>0 && !q.empty()) {
+					// first compress data, create tree
+					if(trees[g] == nullptr) {
+						trees[g] = new Tree(g,0);
+						has_tree[g] = true;
+						for(int t_plum = 0; t_plum < now; t_plum++) {
+							trees[g]->pathAdd(nullptr);
+						}
+					}
+
+					RawData* data = q.front();
+					q.pop();
+					trees[g]->insert(data);
+					compress_cnts[g]--;
+
+					// raw data storage path
+					int arrival_time = data->getPath().back()->getTo()->getTimeslot();
+					for(int t_plum = arrival_time; t_plum < now; t_plum++) {
+						links[t_plum][s][s]->assign(data);
+					}
+					
+					
+					if(compress_cnts[g] == 0) {
+						// tree storage path
+						if(trees[g]->getPath().size() == 0) arrival_time = now;
+						else arrival_time = trees[g]->getPath().back()->getTo()->getTimeslot();
+						for(int t_plum = arrival_time; t_plum <= now; t_plum++) {
+							links[t_plum][s][s]->assign(trees[g]);
+						}
+
+						finished_times[timeslot][g] = now+1; // TODO: different compression time
+						finished_sizes[timeslot][g] = trees[g]->getSize();
+						que[s].erase(g);
+					}
+					break;
+				}
+			}
+		}
+		now++;
+	}
+	
+
 }
 
 void MyAlgo::debug() {

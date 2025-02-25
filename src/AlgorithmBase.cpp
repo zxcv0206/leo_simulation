@@ -101,7 +101,7 @@ void AlgorithmBase::buildGraph(string file){
 
 void AlgorithmBase::addReq(){
     raw_datas.resize(total_grids);
-    trees.resize(total_grids);
+    trees.resize(total_grids, nullptr);
 
     // all users has its raw data in the beginning
     for(int u = total_satellites; u<total_satellites+total_users; u++){
@@ -136,8 +136,8 @@ void AlgorithmBase::debug(){
     for(auto &raw_datas_g: raw_datas) {
         for(auto &raw_data: raw_datas_g) {
             debugOut << raw_data->getName() + " path:" << endl;
-            for(auto &node: raw_data->getPath()) {
-                debugOut << node->getName() << " -> ";
+            for(auto &link: raw_data->getPath()) {
+                debugOut << link->getName() << " -> ";
             }
             debugOut << endl;
         }

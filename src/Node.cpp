@@ -29,7 +29,6 @@ void Node::dataIn(Data* data){
     }
     
     used_capacity += data->getSize();
-    data->pathAdd(this);
 }
 
 void Node::dataOut(Data* data){

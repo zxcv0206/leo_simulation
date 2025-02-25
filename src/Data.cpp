@@ -11,7 +11,7 @@ string Data::getType() const {
 long long Data::getDataCnt() const {
     return data_cnt;
 }
-vector<Node*> Data::getPath() const {
+vector<Link*> Data::getPath() const {
     return path;
 }
 
@@ -19,8 +19,8 @@ long long Data::getSize() const {
     return log(data_cnt);
 }
 
-void Data::pathAdd(Node* node) {
-    path.push_back(node);
+void Data::pathAdd(Link* link) {
+    path.push_back(link);
 }
 
 RawData::RawData(User* user, long long data_cnt)
@@ -49,4 +49,8 @@ int Tree::getGrid() const {
 
 string Tree::getName() const {
     return "Tree[ grid" + to_string(grid) + ", k" + to_string(data_cnt) + " ]";
+}
+
+void Tree::insert(RawData* data) {
+    data_cnt++;
 }

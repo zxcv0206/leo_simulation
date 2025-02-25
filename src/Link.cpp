@@ -1,13 +1,16 @@
 #include "Link.h"
 
-Link::Link(Node* from, Node* to, long long capacity)
-:from(from), to(to), capacity(capacity), used_capacity(0){}
+Link::Link(Node* from, Node* to, long long capacity, int weight)
+:from(from), to(to), weight(weight), capacity(capacity), used_capacity(0){}
 
 const Node *Link::getFrom()const{
     return from;
 }
 const Node *Link::getTo()const{
     return to;
+}
+int Link::getWeight()const{
+    return weight;
 }
 
 string Link::getName() const {
@@ -25,6 +28,7 @@ void Link::assign(Data* data){
     assert(getRemainCapacity() > 0);
     used_capacity++;
     to->dataIn(data);
+    data->pathAdd(this);
 }
 void Link::transmit(Data* data){
     cout<<"Link::transmit : (" << data->getGrid() << "," << data->getDataCnt() << ") from " << from->getId() << " to " << to->getId() <<endl;

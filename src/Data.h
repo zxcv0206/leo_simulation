@@ -7,13 +7,14 @@ using namespace std;
 
 class User;
 class Node;
+class Link;
 
 class Data {
     string type;          // data type: raw data or tree
     
 protected:
     long long data_cnt;      // # of raw data in this data
-    vector<Node*> path; // every nodes along path in TEG
+    vector<Link*> path; // every links along path in TEG
     
 public:
     inline const static string RAWDATA = "RAWDATA";
@@ -23,12 +24,12 @@ public:
     virtual ~Data(){};
     string getType() const;
     long long getDataCnt() const;
-    vector<Node*> getPath() const;
+    vector<Link*> getPath() const;
     
     long long getSize() const;
     virtual int getGrid() const=0;
     virtual string getName() const=0;
-    void pathAdd(Node* node); // nodes along with path in TEG
+    void pathAdd(Link* link); // links along with path in TEG
 };
 
 class RawData: public Data {
@@ -49,7 +50,9 @@ public:
     ~Tree(){};
 
     int getGrid() const;
+    
     string getName() const;
+    void insert(RawData* data);
 };
 
 #endif

@@ -21,7 +21,7 @@ protected:
     vector<vector<Node *>> nodes; // nodes[t][id]
     vector<vector<map<int, Link*>>> links;             // links[t][u][v]
     vector<vector<RawData*>> raw_datas; // raw_datas[g][i] 
-    vector<Tree*> trees; // tree[g]
+    vector<Tree*> trees; // trees[g]
 
     // two graphs stores the same data, but different data structure
     // vector<map<pair<int, int>, Channel *>> graphs_matrix;   // graphs[t][{u, v}] -> Channel*  
