@@ -1,5 +1,5 @@
 CC=g++
-CFLAGS=-Wall -Wextra -O3 -g -Wall
+CFLAGS=-Wall -Wextra -O0 -g -Wall
 
 dependency= Data.o Node.o Link.o AlgorithmBase.o MyAlgo.o debug.o
 

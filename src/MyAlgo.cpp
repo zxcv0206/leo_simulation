@@ -2,7 +2,7 @@
 
 
 MyAlgo::MyAlgo(string graphFile)
-    :AlgorithmBase("MyAlgo", graphFile){
+    :AlgorithmBase("MyAlgo", graphFile), decided_cnt(0){
 	new_raw_data_cnts.resize(total_grids);
 	for(auto &new_raw_data_cnts_g: new_raw_data_cnts) {
 		new_raw_data_cnts_g.resize(total_satellites, 0);
@@ -17,17 +17,35 @@ MyAlgo::MyAlgo(string graphFile)
 	for(auto &compress_sats_t: compress_sats) {
 		compress_sats_t.resize(total_grids, -1);
 	}
+
+	finished_times.resize(total_timeslots);
+	for(auto &finished_times_t: finished_times) {
+		finished_times_t.resize(total_grids, -1);
+	}
+
+	finished_sizes.resize(total_timeslots);
+	for(auto &finished_sizes_t: finished_sizes) {
+		finished_sizes_t.resize(total_grids, -1);
+	}
 }
 
 
 void MyAlgo::start() {
 	calHops();
 	for(timeslot = 0; timeslot < total_timeslots; timeslot++) {
-		init();
 		uploadRawDatas();
 		findCompressSat();
 		findAllPaths();
 		compression();
+		refresh();
+
+		
+		if(decided_cnt == total_users) {
+			for(auto tree: trees) {
+				res = max(res, tree->getPath().back()->getTo()->getTimeslot());
+			}
+			return;
+		}
 	}
 }
 
@@ -56,7 +74,7 @@ void MyAlgo::calHops() { // need to precalculate hops for future timeslot for Tr
 	}
 }
 
-void MyAlgo::init() {
+void MyAlgo::refresh() {
 	for(int g = 0; g < total_grids; g++) {
 		for(int s = 0; s < total_satellites; s++) {
 			new_raw_data_cnts[g][s] = 0;
@@ -277,13 +295,7 @@ void MyAlgo::compression() {
 	vector<bool> has_tree(total_grids, false); // has_tree[g]: true if tree from g arrived to compress sat s
 	vector<map<int,queue<RawData*>>> que(total_satellites); // que[s][g]: all datas from g has arrived to compress sat s  
 	for(auto arrival_p: arrivals) {
-		auto [t, data] = arrival_p;
-		int g = data->getGrid();
-		int s = compress_sats[timeslot][g];
-		que[s][g]; // make que[s][g] exist
-
-		if(data->getType() == Data::TREE) has_tree[g] = true;
-		else que[s][g].push((RawData*)data);
+		auto [t, this_data] = arrival_p;
 
 		// TODO: different compression time
 		while(now < t) { // compress greedily 
@@ -305,6 +317,7 @@ void MyAlgo::compression() {
 						q.pop();
 						trees[g]->insert(data);
 						compress_cnts[g]--;
+						decided_cnt++;
 
 						// raw data storage path
 						int arrival_time = data->getPath().back()->getTo()->getTimeslot();
@@ -315,7 +328,7 @@ void MyAlgo::compression() {
 						
 						if(compress_cnts[g] == 0) {
 							// tree storage path
-							if(trees[g]->getPath().size() == 0) arrival_time = now;
+							if(trees[g]->getPath().size() == 0 || trees[g]->getPath().back() == nullptr) arrival_time = now;
 							else arrival_time = trees[g]->getPath().back()->getTo()->getTimeslot();
 							for(int t_plum = arrival_time; t_plum <= now; t_plum++) {
 								links[t_plum][s][s]->assign(trees[g]);
@@ -330,6 +343,14 @@ void MyAlgo::compression() {
 				}
 			}
 			now++;
+		}
+
+		int g = this_data->getGrid();
+		int s = compress_sats[timeslot][g];
+		if(this_data->getType() == Data::TREE) has_tree[g] = true;
+		else {
+			que[s][g]; // make que[s][g] exist
+			que[s][g].push((RawData*)this_data);
 		}
 	} 
 
@@ -355,6 +376,7 @@ void MyAlgo::compression() {
 					q.pop();
 					trees[g]->insert(data);
 					compress_cnts[g]--;
+					decided_cnt++;
 
 					// raw data storage path
 					int arrival_time = data->getPath().back()->getTo()->getTimeslot();
@@ -365,7 +387,7 @@ void MyAlgo::compression() {
 					
 					if(compress_cnts[g] == 0) {
 						// tree storage path
-						if(trees[g]->getPath().size() == 0) arrival_time = now;
+						if(trees[g]->getPath().size() == 0 || trees[g]->getPath().back() == nullptr) arrival_time = now;
 						else arrival_time = trees[g]->getPath().back()->getTo()->getTimeslot();
 						for(int t_plum = arrival_time; t_plum <= now; t_plum++) {
 							links[t_plum][s][s]->assign(trees[g]);

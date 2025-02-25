@@ -38,6 +38,10 @@ AlgorithmBase::~AlgorithmBase(){
     trees.clear();
 }
 
+int AlgorithmBase::getRes(){
+    return res;
+}
+
 string AlgorithmBase::getName(){
     return algoName;
 }

@@ -20,6 +20,7 @@ int main(){
             cout << algo->getName() << endl;
             algo->start();
             if(DEBUG) algo->debug();
+            cout << algo->getRes() << endl;
         }
 
         // delete algo

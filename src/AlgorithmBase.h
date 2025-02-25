@@ -26,14 +26,14 @@ protected:
     // two graphs stores the same data, but different data structure
     // vector<map<pair<int, int>, Channel *>> graphs_matrix;   // graphs[t][{u, v}] -> Channel*  
     
-    map<string, double> res;
+    int res;
     // void assignChannel(const Request &r, int t, int from, int to, long long data_size);
     // virtual void assignChannels()=0;
 
 public:
     AlgorithmBase(string algoName, string graphFile);
     virtual ~AlgorithmBase();
-    double getRes(string s);
+    int getRes();
     string getName();
     
     virtual void start();
