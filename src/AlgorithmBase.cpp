@@ -146,5 +146,13 @@ void AlgorithmBase::debug(){
             debugOut << endl;
         }
     }
+    for(auto &tree: trees) {
+        debugOut << tree->getName() + " path:" << endl;
+        for(auto &link: tree->getPath()) {
+            if(link == nullptr) debugOut << "null -> ";
+            else debugOut << link->getName() << " -> ";
+        }
+        debugOut << endl;
+    }
     debugOut << "=================" << endl;
 }

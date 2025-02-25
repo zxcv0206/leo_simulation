@@ -35,6 +35,7 @@ void MyAlgo::start() {
 	for(timeslot = 0; timeslot < total_timeslots; timeslot++) {
 		uploadRawDatas();
 		findCompressSat();
+		// debug();
 		findAllPaths();
 		compression();
 		refresh();
@@ -116,7 +117,8 @@ void MyAlgo::findCompressSat() {
 	for(int g = 0; g < total_grids; g++) {
 		for(int s2 = 0; s2 < total_satellites; s2++) {
 			for(int s1 = 0; s1 < total_satellites; s1++) {
-				costs[g][s2] += hop_cnts[timeslot][s1][s2] * new_raw_data_cnts[g][s1];
+				if( (new_raw_data_cnts[g][s1] > 0 && hop_cnts[timeslot][s1][s2] == INT_MAX) || costs[g][s2] == INT_MAX) costs[g][s2] = INT_MAX;
+				else costs[g][s2] += hop_cnts[timeslot][s1][s2] * new_raw_data_cnts[g][s1];
 				processes[g][s2] += new_raw_data_cnts[g][s1];
 			}
 			// TODO: TREE
@@ -138,7 +140,7 @@ void MyAlgo::findCompressSat() {
 			if(compress_sats[timeslot][g] != -1) continue; // this grid compress sat was already decided
 			int mn = INT_MAX, sec_mn = INT_MAX, mn_s = -1;
 			for(int s = 0; s < total_satellites; s++) {
-				if(processes[g][s] <= remain_makespan[s] && costs[g][s] <= mn) { // according to weight function
+				if(processes[g][s] <= remain_makespan[s] && costs[g][s] <= mn && costs[g][s] != -1) { // according to weight function
 					sec_mn = mn;
 					mn = costs[g][s];
 					mn_s = s;
